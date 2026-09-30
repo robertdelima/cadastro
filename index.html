@@ -121,6 +121,74 @@
         padding: 20px;
       }
     }
+    
+    /* Estilos do Pop-up (Modal) */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 320px;
+      width: 90%;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      transform: translateY(-20px);
+      transition: transform 0.3s ease;
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: translateY(0);
+    }
+
+    .modal-icon {
+      width: 50px;
+      height: 50px;
+      background-color: #28a745;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0 auto 15px auto;
+    }
+
+    .modal-card h3 {
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .modal-card p {
+      color: #666;
+      font-size: 0.95rem;
+      margin-bottom: 20px;
+    }
+
+    .modal-card button {
+      background-color: var(--primary-color);
+      margin-top: 0;
+    }
   </style>
 </head>
 <body>
@@ -148,6 +216,16 @@
     </form>
 
     <div id="feedback"></div>
+  </div>
+  
+  <!-- Modal / Pop-up de Confirmação -->
+  <div id="modalSucesso" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-icon">✓</div>
+      <h3>Sucesso!</h3>
+      <p>Cliente cadastrado na planilha com sucesso.</p>
+      <button id="btnFecharModal" type="button">OK</button>
+    </div>
   </div>
 
   <script>
@@ -212,35 +290,55 @@
       }
     });
     
-    const telefoneInput = document.getElementById('telefone');
+    const modal = document.getElementById('modalSucesso');
+    const btnFecharModal = document.getElementById('btnFecharModal');
 
-    telefoneInput.addEventListener('input', (e) => {
-      // Guarda apenas os números digitados
-      let v = e.target.value.replace(/\D/g, '');
-
-      // Limita a 11 dígitos
-      if (v.length > 11) v = v.slice(0, 11);
-
-      // Formata de acordo com a quantidade de números inseridos
-      if (v.length === 0) {
-        e.target.value = '';
-      } else if (v.length <= 2) {
-        e.target.value = `(${v}`;
-      } else if (v.length <= 7) {
-        e.target.value = `(${v.slice(0, 2)}) ${v.slice(2)}`;
-      } else {
-        e.target.value = `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`;
-      }
+    // Ao clicar no botão OK, fecha o pop-up
+    btnFecharModal.addEventListener('click', () => {
+      modal.classList.remove('active');
     });
 
-    // Permite apagar sem travar nos caracteres especiais () e -
-    telefoneInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Backspace') {
-        const v = telefoneInput.value;
-        // Se o cursor estiver logo após um caractere especial ao apagar, remove o número anterior junto
-        if (v.endsWith(' ') || v.endsWith('-') || v.endsWith(')')) {
-          telefoneInput.value = v.slice(0, -1);
-        }
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Enviando...';
+
+      const dataInput = document.getElementById('data').value;
+      let dataFormatada = dataInput;
+      if (dataInput) {
+        const [ano, mes, dia] = dataInput.split('-');
+        dataFormatada = `${dia}/${mes}/${ano}`;
+      }
+
+      const payload = {
+        cliente: document.getElementById('cliente').value,
+        telefone: document.getElementById('telefone').value,
+        data: dataFormatada
+      };
+
+      try {
+        await fetch(URL_DA_SUA_API, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // Limpa o formulário e restaura a data de hoje
+        form.reset();
+        document.getElementById('data').valueAsDate = new Date();
+
+        // Exibe o pop-up de sucesso
+        modal.classList.add('active');
+
+      } catch (err) {
+        alert('Erro ao cadastrar. Tente novamente.');
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Cadastrar na Planilha';
       }
     });
   </script>
