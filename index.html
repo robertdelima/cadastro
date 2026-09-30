@@ -239,17 +239,20 @@
     const feedback = document.getElementById('feedback');
     const btnSubmit = document.getElementById('btnSubmit');
 
+ let enviando = false;
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      e.stopPropagation();
 
-      // Desabilita o botão para evitar envios duplicados
+      // Trava para impedir qualquer execução paralela antes da resposta
+      if (enviando) return;
+      enviando = true;
+
       btnSubmit.disabled = true;
       btnSubmit.textContent = 'Enviando...';
-      feedback.className = '';
-      feedback.style.display = 'none';
 
-      // Dados para alimentar as colunas Cliente, Telefone e Data
-     const dataInput = document.getElementById('data').value;
+      const dataInput = document.getElementById('data').value;
       let dataFormatada = dataInput;
       if (dataInput) {
         const [ano, mes, dia] = dataInput.split('-');
@@ -263,28 +266,25 @@
       };
 
       try {
-        // Envio via fetch POST para o Google Apps Script
-        const response = await fetch(URL_DA_SUA_API, {
+        // Envio usando Blob com tipo text/plain impede o pré-flight e duplicidades de redirecionamento no Apps Script
+        await fetch(URL_DA_SUA_API, {
           method: 'POST',
-          mode: 'no-cors', // Evita restrições de CORS do Google Apps Script
+          mode: 'no-cors',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'text/plain;charset=utf-8'
           },
           body: JSON.stringify(payload)
         });
 
-        // Exibe mensagem de sucesso
-        feedback.textContent = 'Cliente cadastrado com sucesso!';
-        feedback.className = 'success';
-
-        // Reseta o formulário
+        // Limpa o formulário e exibe o modal
         form.reset();
         document.getElementById('data').valueAsDate = new Date();
+        modal.classList.add('active');
 
       } catch (err) {
-        feedback.textContent = 'Erro ao cadastrar. Tente novamente.';
-        feedback.className = 'error';
+        alert('Erro ao cadastrar. Tente novamente.');
       } finally {
+        enviando = false;
         btnSubmit.disabled = false;
         btnSubmit.textContent = 'Cadastrar na Planilha';
       }
